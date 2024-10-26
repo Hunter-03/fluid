@@ -1,0 +1,57 @@
+pip install opencv-python mediapipe
+import cv2
+import mediapipe as mp
+
+# Initialize MediaPipe Hands
+mp_hands = mp.solutions.hands
+mp_drawing = mp.solutions.drawing_utils
+hands = mp_hands.Hands(min_detection_confidence=0.7, min_tracking_confidence=0.7)
+
+# OpenCV video capture
+cap = cv2.VideoCapture(0)
+
+# Gesture classification function
+def classify_gesture(landmarks):
+    thumb_tip = landmarks[4]
+    index_tip = landmarks[8]
+    middle_tip = landmarks[12]
+
+    # Define simple gestures based on finger positions
+    if thumb_tip.y < index_tip.y and index_tip.y < middle_tip.y:
+        return "Thumbs Up"
+    elif thumb_tip.x > index_tip.x and thumb_tip.x > middle_tip.x:
+        return "Thumbs Left"
+    elif thumb_tip.x < index_tip.x and thumb_tip.x < middle_tip.x:
+        return "Thumbs Right"
+    elif index_tip.y < thumb_tip.y and middle_tip.y > index_tip.y:
+        return "Peace Sign"
+    else:
+        return "Unknown Gesture"
+
+while cap.isOpened():
+    ret, frame = cap.read()
+    if not ret:
+        break
+
+    # Convert image to RGB
+    rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    results = hands.process(rgb_frame)
+
+    if results.multi_hand_landmarks:
+        for hand_landmarks in results.multi_hand_landmarks:
+            mp_drawing.draw_landmarks(frame, hand_landmarks, mp_hands.HAND_CONNECTIONS)
+
+            # Get landmark list
+            landmarks = hand_landmarks.landmark
+            gesture = classify_gesture(landmarks)
+            cv2.putText(frame, gesture, (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2)
+
+    cv2.imshow("Hand Gesture Recognition", frame)
+
+    # Break loop on 'q' key press
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
+
+cap.release()
+cv2.destroyAllWindows()
+hands.close()
